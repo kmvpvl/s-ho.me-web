@@ -1,0 +1,338 @@
+openapi: '3.0.2'
+info:
+  title: S-HO.ME
+  version: '1.0'
+servers:
+  - url: https://s-ho-me-api.onrender.com
+    description: PROD server
+  - url: http://localhost:8000
+    description: Debug server
+
+components:
+  schemas:
+    createdorganizationinfo:
+      type: object
+      properties:
+        ogrganizationid:
+          type: string
+        admintoken:
+          type: string
+    devicereport:
+      type: object
+      required:
+        - devices
+      properties:
+        timestamp:
+          type: string
+          pattern: ^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)
+        devices:
+          type: array
+          items: 
+            type: object
+            properties:
+              id:
+                description: Device id
+                type: string
+              value:
+                description: Value as a numeric value
+                type: number
+              strvalue:
+                description: value as a string, number with units usually
+                type: string
+              extra:
+                description: Extra data, for future use
+                type: object
+            required:
+              - id
+              - value
+    device:
+      type: object
+      required:
+        - organizationid
+        - id
+        - name
+        - type
+        - hardware
+        - pin
+        - freqRead
+        - freqReport
+        - reportOnValueChanged
+        - location
+      properties:
+        _id:
+          type: string
+          pattern: ^[0-9a-fA-F]{24}$
+        organizationid:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        units:
+          type: string
+        hardware:
+          type: string
+        pin: 
+          type: number
+        emulation:
+          type: boolean
+        freqRead:
+          type: number
+        freqReport:
+          type: number
+        threshold:
+          type: number
+        precision:
+          type: number
+        reportOnValueChanged:
+          type: boolean
+        reportOnInit:
+          type: boolean
+        location: 
+          type: object
+          required:
+            - layer
+          properties:
+            layer: 
+              type: string
+            x: 
+              type: number
+            y: 
+              type: number
+        ranges:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+              color:
+                type: string
+              min: 
+                type: number
+              max:
+                type: number
+        created:
+          type: string
+          pattern: ^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)
+        changed:
+          type: string
+          pattern: ^((?:(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?))(Z|[\+-]\d{2}:\d{2})?)
+    controller:
+      type: object
+      required:
+        - name
+        - description
+        - autoupdate
+      properties:
+        _id:
+          type: string
+        organizationid:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        autoupdate:
+          type: object
+          required:
+            - auto
+          properties:
+            auto: 
+              type: boolean
+            repo: 
+              type: string
+            branch:
+              type: string
+        location:
+          type: object
+        buffer: 
+          type: object
+        logs:
+          type: object
+        layers:
+          type: array
+          items:
+            type: object
+            required:
+              - sortNumber
+              - id
+              - name
+            properties:
+              sortNumber:
+                type: number
+              bgImage:
+                type: string
+              id:
+                type: string
+              name:
+                type: string
+        rules:
+          type: array
+          items:
+            type: object
+  securitySchemes:
+    SHOMEAuthOrganizationId:
+      type: apiKey
+      in: header
+      name: shome_organizationid
+    SHOMEAuthToken:
+      type: apiKey
+      in: header
+      name: shome_authtoken
+  requestBodies:
+    updateorganization:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              modes:
+                type: array
+              rules:
+                type: array
+    createorganizationtoken:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - roles
+            properties:
+              roles:
+                type: array
+                items:
+                  minItems: 1
+                  type: string
+                  enum:
+                    - admin
+                    - controller
+    initdevices:
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/device"
+    devicereport:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/devicereport"
+paths:
+  /version:
+    get:
+      operationId: version
+      description: Returns version of Application
+      security: []
+      responses:
+        '200':
+          description: OK
+  /createorganization:
+    post:
+      operationId: createorganization
+      security: []
+      description: Creates new organization. No authentication required 
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createdorganizationinfo" 
+          description: OK
+  /changemode:
+    post:
+      operationId: changemode
+      description: Changes current mode of organization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+      responses:
+        '200':
+          description: OK
+  /updateorganization:
+    post:
+      operationId: updateorganization
+      description: Updates rules and modes. Needs Admin role
+      requestBody:
+        $ref: "#/components/requestBodies/updateorganization"
+      responses:
+        '200':
+          description: OK
+  /organizationinfo:
+    post:
+      operationId: organizationinfo
+      description: Returns all information of organization
+      responses:
+        '200':
+          description: OK
+  /getlastvalues:
+    post:
+      operationId: getlastvalues
+      description: Returns all information of devices and them last values
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items: 
+                type: string
+      responses:
+        '200':
+          description: OK
+  /devicereport:
+    post:
+      operationId: devicereport
+      description: Processes report from device and returns actual parameters for device
+      requestBody:
+        $ref: "#/components/requestBodies/devicereport"
+      responses:
+        '200':
+          description: OK
+  /initcontroller:
+    post:
+      operationId: initcontroller
+      description: Initializes controller connection, send to controller actual parameters
+      responses:
+        '200':
+          description: OK
+  /createorganizationtoken:
+    post:
+      operationId: createorganizationtoken
+      description: Creates new organization token. Authentication required 
+      requestBody:
+        $ref: "#/components/requestBodies/createorganizationtoken"
+      responses:
+        '200':
+          description: OK
+  /controllerreport:
+    post:
+      operationId: controllerreport
+      description: 'Processes report from controller and returns actual parameters for controller'
+      parameters: []
+      responses:
+        '200':
+          description: OK
+  /initdevices:
+    post:
+      description: ''
+      operationId: initdevices
+      requestBody:
+        $ref: "#/components/requestBodies/initdevices"
+      responses:
+        '200':
+          description: OK
+security:
+  - SHOMEAuthOrganizationId: []
+    SHOMEAuthToken: []

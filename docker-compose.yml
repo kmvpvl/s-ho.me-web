@@ -1,0 +1,24 @@
+services:
+  shome-api:
+    image: shome-api:1
+    container_name: shome-api
+    build: ./api/
+    restart: always
+    env_file:
+      - path: ./api/.env
+        required: false
+      - path: ./api/.env.development.local
+        required: false
+    environment:
+      - PORT=8000
+  shome-cli:
+    image: shome-cli:1
+    build: ./cli/
+    container_name: shome-cli
+    environment:
+      - PORT=3000
+  
+networks:
+  default:
+    name: base-network
+    external: true

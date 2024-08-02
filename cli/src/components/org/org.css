@@ -1,0 +1,65 @@
+.org-management-container {
+    grid-area: org;
+}
+
+.org-management-loginform {
+    position: absolute;
+    width: fit-content;
+    height: fit-content;
+    min-height: fit-content;
+    max-height: 80%;
+    max-width: 80%;
+    margin: auto;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 5px;
+    padding: 1em;
+    border: var(--text-color) 1px solid;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: grid;
+    gap: 0.5em;
+    overflow: hidden;
+}
+@media (orientation: portrait) {
+    .org-management-loginform {
+        grid-template-areas: 
+        "intro intro intro"
+        "blank1 label1 blank2"
+        "blank1 orgname1 blank2" 
+        "blank1 authcode blank2" 
+        "blank1 btnlogin blank2"
+        "or or or"
+        "blank3 label2 blank4" 
+        "blank3 orgname2 blank4" 
+        "blank3 tguser blank4" 
+        "blank3 btncreate blank4"
+        "status status status";
+        grid-template-rows: minmax(auto, 1fr) auto auto auto auto auto auto auto auto auto auto;
+        grid-template-columns: 1fr auto 1fr;
+    }
+}
+
+@media (orientation: landscape) {
+    .org-management-loginform {
+        grid-template-areas: 
+        "intro intro intro intro intro intro"
+        "blank1 label1 orgname1 authcode btnlogin blank2"
+        "or or or or or or"
+        "blank3 label2 orgname2 tguser btncreate blank4"
+        "status status status status status status";
+        grid-template-rows: minmax(auto, 1fr) auto auto auto auto;
+        grid-template-columns: 1fr auto auto auto auto 1fr;
+    }
+}
+
+.org-management-loginform-intro {
+    grid-area: intro;
+    text-align: justify;
+    overflow: auto;
+    max-height: fit-content;
+    height: 100%;
+}
+  

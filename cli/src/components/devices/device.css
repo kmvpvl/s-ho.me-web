@@ -1,0 +1,10 @@
+.device-container {
+    position: absolute;
+    width: fit-content;
+    height: fit-content;
+    /*border: 1px dashed var(--text-color);
+    border-radius: 2em 2em 0.5em 0.5em;
+    background-color: var(--light-color);*/
+    color: var(--background-color);
+    text-align: center;
+}
