@@ -66,7 +66,7 @@ export function serverFetch(command: string, method: string, headers?: HeadersIn
 
 export function serverCommand (command: string, lr?: ILoginReq, body?: BodyInit, successcb?: (res: any)=>void, failcb?: (err: SHomeError)=>void){
     serverFetch(command, 'POST', {
-        shome_organizationid: lr?.organizationid?lr.organizationid.toString():'',
-        shome_authtoken: lr?.authtoken?lr.authtoken:''
+        'shome-organizationid': lr?.organizationid?lr.organizationid.toString():'',
+        'shome-authtoken': lr?.authtoken?lr.authtoken:''
     }, body, successcb, failcb);
 }

@@ -9,12 +9,26 @@ import { Context} from "openapi-backend";
 import SHOMEError from "../model/error";
 import { Telegraf } from "telegraf";
 
+export async function isorganizationidfree(cntx: Context, req: Request, res: Response, org: Organization, roles: SHOMERoles[], bot: Telegraf){
+    const id = req.body.id;
+    console.log(`id = '${id}'`);
+    return res.status(200).json(await Organization.isOrganizationIdFree(id)); 
+}
+
+export async function createorganization(cntx: Context, req: Request, res: Response, org: Organization, roles: SHOMERoles[], bot: Telegraf){
+    const id = req.body.id;
+    const admintguserid = req.body.admintguserid;
+    console.log(`id = '${id}'; admintguserid = '${admintguserid}'`)
+    const newOrg = await Organization.createOrganization(id, admintguserid);
+    return res.status(200).json(newOrg);
+}
 
 export async function createOrganizationToken(cntx: Context, req: Request, res: Response, org: Organization, roles: SHOMERoles[]){
-    const r = cntx.request.body.roles;
-    console.log(`roles='${r}'`);
+    const newUserRoles = cntx.request.body.roles;
+    const tguserid = req.body.tguserid;
+    console.log(`roles='${newUserRoles}'`);
     if (Organization.hasRole('admin', roles)) {
-        const ret = await org.createToken(r);
+        const ret = await org.createToken(newUserRoles, tguserid);
         return res.status(200).json(ret);
     } else {
         throw new SHOMEError("forbidden:roleexpected", `Admin role expected`);

@@ -3,7 +3,7 @@ info:
   title: S-HO.ME
   version: '1.0'
 servers:
-  - url: https://s-ho-me-api.onrender.com
+  - url: https://api.s-ho.me
     description: PROD server
   - url: http://localhost:8000
     description: Debug server
@@ -179,11 +179,11 @@ components:
     SHOMEAuthOrganizationId:
       type: apiKey
       in: header
-      name: shome_organizationid
+      name: shome-organizationid
     SHOMEAuthToken:
       type: apiKey
       in: header
-      name: shome_authtoken
+      name: shome-authtoken
   requestBodies:
     updateorganization:
       content:
@@ -213,6 +213,8 @@ components:
                   enum:
                     - admin
                     - controller
+              tguserid:
+                type: string
     initdevices:
       content:
         application/json:
@@ -234,11 +236,43 @@ paths:
       responses:
         '200':
           description: OK
+  /isorganizationidfree:
+    post:
+      operationId: isorganizationidfree
+      description: Allows to check is the name of organization to be reserved
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+              required:
+                - id
+      responses:
+        '200':
+          description: OK
   /createorganization:
     post:
       operationId: createorganization
       security: []
       description: Creates new organization. No authentication required 
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                admintguserid:
+                  oneOf:
+                    - type: string
+                    - type: number
+              required:
+                - id
       responses:
         '200':
           content:

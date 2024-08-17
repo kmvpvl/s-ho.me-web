@@ -4,13 +4,14 @@ import { devicereport, initdevices } from "./api/device";
 import initcontroller from "./api/controller";
 import Organization from "./model/organization";
 import { UUID } from "crypto";
-import { changemode, createOrganizationToken, getlastvalues, organizationinfo, updateorganization } from "./api/organization";
+import { changemode, createorganization, createOrganizationToken, getlastvalues, isorganizationidfree, organizationinfo, updateorganization } from "./api/organization";
 import cors from 'cors';
 import morgan from "morgan";
 import SHOMEError from "./model/error";
 import { Telegram, Telegraf, TelegramError, Context } from "telegraf";
+import checkSettings from "./model/settings"
 var npm_package_version = require('../package.json').version;
-
+checkSettings();
 const api = new OpenAPIBackend({ 
     definition: 'shome.yml'
 });
@@ -19,6 +20,8 @@ api.init();
 
 api.register({
     version:  async (c, req, res, org, roles) => {return res.status(200).json({version: npm_package_version})},
+    isorganizationidfree: async (c, req, res, org, roles, bot) => await isorganizationidfree(c, req, res, org, roles, bot),
+    createorganization: async (c, req, res, org, roles, bot) => await createorganization(c, req, res, org, roles, bot),
     devicereport: async (c, req, res, org, roles, bot) => await devicereport(c, req, res, org, roles, bot),
     initcontroller: async (c, req, res, org, roles) => await initcontroller(c, req, res, org, roles),
     initdevices: async (c, req, res, org, roles) => await initdevices(c, req, res, org, roles),
@@ -58,8 +61,8 @@ if (process.env.tgToken) {
 
 app.use(async (req, res) => {
     let org;
-    const organizationid = req.headers['shome_organizationid'] as string;
-    const authtoken = req.headers['shome_authtoken'] as UUID;
+    const organizationid = req.headers['shome-organizationid'] as string;
+    const authtoken = req.headers['shome-authtoken'] as UUID;
     console.log(`-----\n✅ [${req.method}:${req.originalUrl}] headers organizationid='${organizationid}'; authtoken='${authtoken}'`);
     try {
         org = await Organization.getByToken(organizationid, authtoken);
@@ -75,8 +78,8 @@ app.use(async (req, res) => {
             path: req.path,
             body: req.body,
             headers: {
-                'shome_organizationid': organizationid,
-                'shome_authtoken': authtoken
+                'shome-organizationid': organizationid,
+                'shome-authtoken': authtoken
             }
         }, req, res, org?.organization, org?.roles, tgBot);
     } 
@@ -92,5 +95,4 @@ app.use(async (req, res) => {
         }
     }
 });
-
 app.listen(PORT, ()=>console.log(`✅ Now listening on port ${PORT}`));

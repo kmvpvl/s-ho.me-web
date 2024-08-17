@@ -11,6 +11,7 @@ export type SHOMERoles = "admin" | "controller" | "user" | "viewer";
 
 export interface IOrganizationToken {
     authTokenHash: string;
+    tguserid?: string | number;
     roles: Array<SHOMERoles>
 }
 
@@ -98,11 +99,11 @@ interface IActionDeviceData {
 const ActionDeviceDataSchema = new Schema({});
 
 interface IActionNotifyData {
-    tguser: number;
+    tguser: number | string;
 }
 
 const ActionNotifyDataSchema = new Schema({
-    tguser: {type: Number, required: true}
+    tguser: {type: Schema.Types.Mixed, required: true}
 });
 
 export interface IAction {
@@ -156,6 +157,7 @@ export interface IOrganization {
 
 export const TokenSchema = new Schema({
     authTokenHash: {type: String, required: true},
+    tguserid: {type: Schema.Types.Mixed, required: false},
     roles: {type: [String], required: true, enum:["admin", "controller"]}
 });
 
@@ -177,26 +179,34 @@ export default class Organization extends MongoProto<IOrganization> {
     constructor(id?: Types.ObjectId, data?: IOrganization) {
         super(mongoOrganizations, id, data);
     }
-    public static async getByToken(name: string, token: UUID): Promise<{organization: Organization, roles: Array<SHOMERoles>}> {
+    public static async isOrganizationIdFree(id: string): Promise<boolean> {
         MongoProto.connectMongo();
-        const hash = Md5.hashStr(`${name} ${token}`);
+        const orgs = await mongoOrganizations.aggregate([{
+            $match: {id: id}
+        }]);
+        return orgs.length !== 1;
+    }
+    public static async getByToken(id: string, token: UUID): Promise<{organization: Organization, roles: Array<SHOMERoles>}> {
+        MongoProto.connectMongo();
+        const hash = Md5.hashStr(`${id} ${token}`);
         const o = await mongoOrganizations.aggregate([
             {"$match": {"tokens.authTokenHash": hash}}
         ]);
-        if (1 !== o.length) throw new SHOMEError("organization:notfound", `name='${name}'; token='${token}'`);
+        if (1 !== o.length) throw new SHOMEError("organization:notfound", `id='${id}'; token='${token}'`);
         const org = new Organization(undefined, o[0]);
         await org.load();
         const roles = org.json?.tokens.filter(el=>el.authTokenHash==hash)[0].roles as SHOMERoles[];
         return {organization: org, roles: roles};
     }
-    public static async createOrganization(name: string): Promise<{organizationid: Types.ObjectId; admintoken: UUID}> {
+    public static async createOrganization(id: string, admintguserid?: number | string): Promise<{organizationid: Types.ObjectId; admintoken: UUID}> {
         const token = v4() as UUID;
-        const hash = Md5.hashStr(`${name} ${token}`);
+        const hash = Md5.hashStr(`${id} ${token}`);
         const iOrg: IOrganization = {
-            id: name,
+            id: id,
             tokens: [
                 {
                     authTokenHash: hash,
+                    tguserid: admintguserid,
                     roles: ['admin']
                 }
             ],
@@ -211,11 +221,11 @@ export default class Organization extends MongoProto<IOrganization> {
         return ret;
     }
 
-    public async createToken(roles: Array<SHOMERoles>): Promise<UUID> {
+    public async createToken(roles: Array<SHOMERoles>, tguserid?: string | number): Promise<UUID> {
         await this.checkData();
         const token = v4() as UUID;
         const hash = Md5.hashStr(`${this.json?.id} ${token}`);
-        this.data?.tokens.push({authTokenHash: hash, roles:roles});
+        this.data?.tokens.push({authTokenHash: hash, tguserid: tguserid, roles:roles});
         await this.save();
         return token;
     }

@@ -1,6 +1,4 @@
 import mongoose, { Model, Types, connect } from "mongoose";
-import settings from "./settings";
-if (settings)
 
 type MongoErrorCode = "settings:mongouriundefined" 
 | "mongo:connect" 
@@ -52,7 +50,7 @@ export default class MongoProto<T> {
             try {
                 throw new MongoError("mongo:connect", `err=${err.message}; uri="${uri}"`)
             } catch(e){
-                console.error(e);
+                console.error(JSON.stringify(e));
             }
         });
     
@@ -88,7 +86,6 @@ export default class MongoProto<T> {
             console.log(`✅ Object data was successfully updated.  type='${this.constructor.name}'; id = '${this.id}'`);
         } else { 
             const objectInserted = await this.model.insertMany([this.data]);
-            this.id = new Types.ObjectId(objectInserted[0]._id);
             this.load(objectInserted[0]);
             console.log(`✅ New object was created. type='${this.constructor.name}'; id = '${this.id}'`);
         }

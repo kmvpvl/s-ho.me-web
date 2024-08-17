@@ -1,22 +1,12 @@
-import fs from 'fs';
+import { configDotenv } from 'dotenv';
 import SHOMEError from './error';
+export default function checkSettings() {
+    configDotenv();
 
-const removeJSONComments = (json: string) => {
-    return json.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => g ? "" : m);
-}
-
-try {
-    let strSettings = fs.readFileSync("settings.json", "utf-8");
-    const settings = JSON.parse(removeJSONComments(strSettings));
-
-    for (let v in settings) {
-        process.env[v] = settings[v];
-    }
-} catch (err: any) {
-    // if settings.json not found, trying to use process.ENV variables
     if (!process.env.mongouri) {
         throw new SHOMEError("settings:mongouriundefined")
     }
+    
+    console.log(`mongouri = '${process.env.mongouri}'`);
+    console.log(`tgbottoken = '${process.env.tgbottoken}'`);
 }
-
-export default process.env;
