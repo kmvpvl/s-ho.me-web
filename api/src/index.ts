@@ -53,8 +53,8 @@ const PORT = process.env.PORT || 8000;
 
 let tgBot: Telegraf;
 
-if (process.env.tgToken) {
-    tgBot = new Telegraf<Context>(process.env.tgToken);
+if (process.env.tgbottoken) {
+    tgBot = new Telegraf<Context>(process.env.tgbottoken);
     if (tgBot) console.log(`Bot started succeccfully`);
     else console.log(`Bot has not started`);
 }
