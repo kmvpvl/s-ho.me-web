@@ -1,0 +1,6 @@
+.layers-selector-container {
+    grid-area: layers;
+    width: 100%;
+    height: 100%;
+  }
+  
