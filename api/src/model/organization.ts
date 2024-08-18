@@ -162,7 +162,7 @@ export const TokenSchema = new Schema({
 });
 
 export const OrganizationSchema = new Schema({
-    id: {type: String, required: true},
+    id: {type: String, required: true, index: true, unique: true},
     tokens: {
         type: [TokenSchema],
         required: true
