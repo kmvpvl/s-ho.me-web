@@ -31,9 +31,10 @@ async function values_command(ctx: TGContext, bot: Telegraf){
             const org_roles = await Organization.getByTgUserId(chat_id);
             if (Organization.hasRole("user", org_roles.roles)) {
                 try {
+                    const cur_mode = await org_roles.organization.getMode();
                     const last_values = await org_roles.organization.devicesWithLastValues();
                     const str = last_values.map(d=>`${d.name} - ${d.value}${d.units?d.units:""} - ${relativeDateString(new Date(d.timestamp))}`).join('\n');
-                    bot.telegram.sendMessage(chat_id, `Last values:\n${str}`)
+                    bot.telegram.sendMessage(chat_id, `${cur_mode?`Current mode of ${org_roles.organization.json?.id}: ${cur_mode}`:"No mode of ${org_roles.organization.json?.id}"}\nLast values:\n${str}`)
                 } catch(e) {
                     bot.telegram.sendMessage(chat_id, ``)
                 }
