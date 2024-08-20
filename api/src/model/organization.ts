@@ -148,6 +148,7 @@ const RuleSchema = new Schema({
 export interface IOrganization {
     _id?: Types.ObjectId;
     id: string;
+    name?: string;
     tokens: Array<IOrganizationToken>;
     modes?: Array<IMode>;
     rules?: Array<IRule>;
@@ -163,6 +164,7 @@ export const TokenSchema = new Schema({
 
 export const OrganizationSchema = new Schema({
     id: {type: String, required: true, index: true, unique: true},
+    name: {type: String, required: false},
     tokens: {
         type: [TokenSchema],
         required: true
@@ -241,18 +243,19 @@ export default class Organization extends MongoProto<IOrganization> {
      * Creates new organization and create new token (user) of organization with admin role
      * 
      * @param id unique mnemonic organization name
-     * @param admintguserid Telegram id of user with admin role
-     * @returns internal id organization (not mnemonic) and admin token (private key) of user
+     * @param adminTgUserId Telegram id of user with admin role
+     * @returns internal _id organization (not mnemonic, system mongo unique key) and admin token (private key) of user
      */
-    public static async createOrganization(id: string, admintguserid?: number | string): Promise<{organizationid: Types.ObjectId; admintoken: UUID}> {
+    public static async create(id: string, name?: string, adminTgUserId?: number | string): Promise<{_id: Types.ObjectId; adminToken: UUID}> {
         const token = v4() as UUID;
         const hash = Md5.hashStr(`${id} ${token}`);
         const iOrg: IOrganization = {
             id: id,
+            name: name,
             tokens: [
                 {
                     authTokenHash: hash,
-                    tguserid: admintguserid,
+                    tguserid: adminTgUserId,
                     roles: ['admin']
                 }
             ],
@@ -261,8 +264,8 @@ export default class Organization extends MongoProto<IOrganization> {
         const org = new Organization(undefined, iOrg);
         await org.save();
         const ret = {
-            organizationid: org.uid, 
-            admintoken: token
+            _id: org.uid, 
+            adminToken: token
         };
         return ret;
     }

@@ -102,14 +102,14 @@ export class Device extends MongoProto<IDevice> {
     constructor(id?: Types.ObjectId, data?: IDevice) {
         super(mongoDevices, id, data);
     }
-    public static async getByName(orgid: string, name: string): Promise<Device | undefined> {
+    public static async getById(orgid: string, name: string): Promise<Device | undefined> {
         const d = await mongoDevices.aggregate([
             {$match: {id: name, organizationid: orgid}}
         ]);
         if (d.length === 1) return new Device(undefined, d[0]);
     }
     public static async createDevice(device: IDevice): Promise<Device> {
-        const d = await Device.getByName(device.organizationid as string, device.id);
+        const d = await Device.getById(device.organizationid as string, device.id);
         if (d) return d;
         const newD = new Device(undefined, device);
         await newD.save();

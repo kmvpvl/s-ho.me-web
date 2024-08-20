@@ -13,7 +13,7 @@ components:
     createdorganizationinfo:
       type: object
       properties:
-        ogrganizationid:
+        _id:
           type: string
         admintoken:
           type: string
@@ -278,6 +278,8 @@ paths:
               type: object
               properties:
                 id:
+                  type: string
+                name:
                   type: string
                 admintguserid:
                   oneOf:

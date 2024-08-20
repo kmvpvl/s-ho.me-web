@@ -64,7 +64,7 @@ export default class Controller extends MongoProto<IController> {
         ]);
         if (c.length === 1) return new Controller(undefined, c[0]);
     }
-    public static async createController(ctrl: IController): Promise<Controller> {
+    public static async create(ctrl: IController): Promise<Controller> {
         const c = await Controller.getByName(ctrl.organizationid, ctrl.name);
         if (c) return c;
         const newC = new Controller(undefined, ctrl);

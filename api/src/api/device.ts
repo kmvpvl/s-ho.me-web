@@ -23,7 +23,7 @@ export async function devicereport(context: Context, req:Request, res: Response,
         idr.created = new Date();
         const dr = new DeviceReport(undefined, idr);
         await dr.save();
-        const device = await Device.getByName(idr.organizationid, idr.id);
+        const device = await Device.getById(idr.organizationid, idr.id);
         if ( device ) devices_ret.push(device.json as IDevice);
     }
     org.checkRules(bot);

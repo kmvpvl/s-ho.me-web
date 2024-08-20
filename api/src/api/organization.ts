@@ -17,9 +17,10 @@ export async function isorganizationidfree(cntx: Context, req: Request, res: Res
 
 export async function createorganization(cntx: Context, req: Request, res: Response, org: Organization, roles: SHOMERoles[], bot: Telegraf){
     const id = req.body.id;
+    const name = req.body.name;
     const admintguserid = req.body.admintguserid;
     console.log(`id = '${id}'; admintguserid = '${admintguserid}'`)
-    const newOrg = await Organization.createOrganization(id, admintguserid);
+    const newOrg = await Organization.create(id, name, admintguserid);
     return res.status(200).json(newOrg);
 }
 

@@ -10,6 +10,6 @@ export default async function initcontroller(context: Context, req:Request, res:
   
     const ic: IController = req.body;
     ic.organizationid = org.json?.id as string;
-    const c = await Controller.createController(ic);
+    const c = await Controller.create(ic);
     return res.status(200).json(c.json);
 } 
