@@ -213,8 +213,12 @@ components:
                   enum:
                     - admin
                     - controller
+                    - user
+                    - viewer
               tguserid:
-                type: string
+                oneOf:
+                  - type: string
+                  - type: number
     initdevices:
       content:
         application/json:

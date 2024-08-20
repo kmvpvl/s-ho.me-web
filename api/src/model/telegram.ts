@@ -29,7 +29,7 @@ async function values_command(ctx: TGContext, bot: Telegraf){
     if (undefined !== chat_id) {
         try {
             const org_roles = await Organization.getByTgUserId(chat_id);
-            if (Organization.hasRole("user", org_roles.roles)) {
+            if (Organization.hasRole(["viewer", "user"], org_roles.roles)) {
                 try {
                     const cur_mode = await org_roles.organization.getMode();
                     const last_values = await org_roles.organization.devicesWithLastValues();

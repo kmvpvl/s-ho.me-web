@@ -276,11 +276,11 @@ export default class Organization extends MongoProto<IOrganization> {
         return token;
     }
 
-    public static hasRole(rolesToSearch: SHOMERoles, rolesAssigned: Array<SHOMERoles>): boolean {
+    public static hasRole(rolesToSearch: SHOMERoles | Array<SHOMERoles>, rolesAssigned: Array<SHOMERoles>): boolean {
         // implementing 'admin has any role'
         if (rolesAssigned.includes("admin")) return true;
-
-        return  rolesAssigned.includes(rolesToSearch);
+        if (!(rolesToSearch instanceof Array)) rolesToSearch = [rolesToSearch];
+        return  rolesToSearch.some(v=> rolesAssigned.includes(v));
     }
     public async devices(): Promise<IDevice[]> {
         const d = await mongoDevices.aggregate([{
