@@ -236,6 +236,14 @@ paths:
       responses:
         '200':
           description: OK
+  /tgconfig:
+    get:
+      operationId: tgconfig
+      description: Does TG settings
+      security: []
+      responses:
+        '200':
+          description: OK
   /isorganizationidfree:
     post:
       operationId: isorganizationidfree

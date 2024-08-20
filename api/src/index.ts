@@ -21,6 +21,7 @@ api.init();
 
 api.register({
     version:  async (c, req, res, org, roles) => {return res.status(200).json({version: npm_package_version})},
+    tgconfig:  async (c, req, res, org, roles) => {return res.status(200).json(await tgConfig(app, tgBot))},
     isorganizationidfree: async (c, req, res, org, roles, bot) => await isorganizationidfree(c, req, res, org, roles, bot),
     createorganization: async (c, req, res, org, roles, bot) => await createorganization(c, req, res, org, roles, bot),
     devicereport: async (c, req, res, org, roles, bot) => await devicereport(c, req, res, org, roles, bot),
@@ -53,7 +54,7 @@ const PORT = process.env.PORT || 8000;
 
 const tgBot = new Telegraf(process.env.tgbottoken || "");
 
-tgConfig(app, tgBot);
+//tgConfig(app, tgBot);
 
 app.use(async (req, res) => {
     const requestUUID = randomUUID();
