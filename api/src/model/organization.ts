@@ -175,17 +175,37 @@ export const OrganizationSchema = new Schema({
 
 export const mongoOrganizations = model<IOrganization>('organizations', OrganizationSchema);
 
+interface IDeviceValues extends IDevice {
+    value: number;
+    value_str: string;
+    timestamp: Date;
+} 
+
+
 export default class Organization extends MongoProto<IOrganization> {
     constructor(id?: Types.ObjectId, data?: IOrganization) {
         super(mongoOrganizations, id, data);
     }
-    public static async isOrganizationIdFree(id: string): Promise<boolean> {
+    /**
+     * Function checks whether id (the unique name of organization) is free
+     *  
+     * @param id unique mnemonic organization name 
+     * @returns true if id is free, or false if the id is occupied
+     */
+    public static async isIdFree(id: string): Promise<boolean> {
         MongoProto.connectMongo();
         const orgs = await mongoOrganizations.aggregate([{
             $match: {id: id}
         }]);
         return orgs.length !== 1;
     }
+    /**
+     * Returns Organization and roles of token (user) by organization id (uniq organization name) and token (private key). Function calcs the public token and search organization by public token
+     * 
+     * @param id unique mnemonic organization name
+     * @param token private key of user of organization
+     * @returns Organization and roles of token (user) 
+     */
     public static async getByToken(id: string, token: UUID): Promise<{organization: Organization, roles: Array<SHOMERoles>}> {
         MongoProto.connectMongo();
         const hash = Md5.hashStr(`${id} ${token}`);
@@ -198,6 +218,32 @@ export default class Organization extends MongoProto<IOrganization> {
         const roles = org.json?.tokens.filter(el=>el.authTokenHash==hash)[0].roles as SHOMERoles[];
         return {organization: org, roles: roles};
     }
+    
+    /**
+     * Returns Organization and roles of token (user) by Telegram id
+     * 
+     * @param tguserid Telegram id of user
+     * @returns Organization and roles of token (user)
+     */
+    public static async getByTgUserId(tguserid: string | number): Promise<{organization: Organization, roles: Array<SHOMERoles>}> {
+        MongoProto.connectMongo();
+        const o = await mongoOrganizations.aggregate([
+            {"$match": {"tokens.tguserid": tguserid}}
+        ]);
+        if (0 === o.length) throw new SHOMEError("organization:notfound", `tguserid='${tguserid}'`);
+        const org = new Organization(undefined, o[0]);
+        await org.load();
+        const roles = org.json?.tokens.filter(el=>el.tguserid===tguserid)[0].roles as SHOMERoles[];
+        return {organization: org, roles: roles};
+    }
+
+    /**
+     * Creates new organization and create new token (user) of organization with admin role
+     * 
+     * @param id unique mnemonic organization name
+     * @param admintguserid Telegram id of user with admin role
+     * @returns internal id organization (not mnemonic) and admin token (private key) of user
+     */
     public static async createOrganization(id: string, admintguserid?: number | string): Promise<{organizationid: Types.ObjectId; admintoken: UUID}> {
         const token = v4() as UUID;
         const hash = Md5.hashStr(`${id} ${token}`);
@@ -321,7 +367,10 @@ export default class Organization extends MongoProto<IOrganization> {
         }
     }
 
-    public async devicesWithLastValues(deviceListIds: string[]): Promise<IDevice[]>  {
+    public async devicesWithLastValues(deviceListIds?: string[]): Promise<IDeviceValues[]>  {
+        if (undefined === deviceListIds) {
+            deviceListIds = (await this.devices()).map(v=>v.id);
+        }
         const d = await mongoDevices.aggregate([
             {
               '$match': {

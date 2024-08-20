@@ -12,7 +12,7 @@ import { Telegraf } from "telegraf";
 export async function isorganizationidfree(cntx: Context, req: Request, res: Response, org: Organization, roles: SHOMERoles[], bot: Telegraf){
     const id = req.body.id;
     console.log(`id = '${id}'`);
-    return res.status(200).json(await Organization.isOrganizationIdFree(id)); 
+    return res.status(200).json(await Organization.isIdFree(id)); 
 }
 
 export async function createorganization(cntx: Context, req: Request, res: Response, org: Organization, roles: SHOMERoles[], bot: Telegraf){

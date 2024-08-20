@@ -3,13 +3,14 @@ import OpenAPIBackend from "openapi-backend";
 import { devicereport, initdevices } from "./api/device";
 import initcontroller from "./api/controller";
 import Organization from "./model/organization";
-import { UUID } from "crypto";
+import { randomUUID, UUID } from "crypto";
 import { changemode, createorganization, createOrganizationToken, getlastvalues, isorganizationidfree, organizationinfo, updateorganization } from "./api/organization";
 import cors from 'cors';
-import morgan from "morgan";
 import SHOMEError from "./model/error";
 import { Telegram, Telegraf, TelegramError, Context } from "telegraf";
 import checkSettings from "./model/settings"
+import colours from "./model/colours";
+import { tgConfig } from "./model/telegram";
 var npm_package_version = require('../package.json').version;
 checkSettings();
 const api = new OpenAPIBackend({ 
@@ -46,34 +47,37 @@ api.registerSecurityHandler('SHOMEAuthToken',  (context, req, res, org)=> {
 
 const app = express();
 app.use(express.json());
-app.use(morgan('tiny'));
 app.use(cors());
 
 const PORT = process.env.PORT || 8000;
 
-let tgBot: Telegraf;
+const tgBot = new Telegraf(process.env.tgbottoken || "");
 
-if (process.env.tgbottoken) {
-    tgBot = new Telegraf<Context>(process.env.tgbottoken);
-    if (tgBot) console.log(`Bot started succeccfully`);
-    else console.log(`Bot has not started`);
-}
+tgConfig(app, tgBot);
 
 app.use(async (req, res) => {
-    let org;
+    const requestUUID = randomUUID();
+    const requestStart = new Date();
+    req.headers["plutchart-uuid"] = requestUUID;
+    req.headers["plutchart-start"] = requestStart.toISOString();
+    console.log(`🚀 ${requestStart.toISOString()} - [${requestUUID}] - ${req.method} ${colours.fg.yellow}${req.path}\n${colours.fg.blue}headers: ${Object.keys(req.headersDistinct).filter(v => v.startsWith("shome-")).map(v => `${v} = '${req.headersDistinct[v]}'`).join(", ")}\nbody: ${Object.keys(req.body).map(v => `${v} = '${req.body[v]}'`).join(", ")}\nquery: ${Object.keys(req.query).map(v => `${v} = '${req.query[v]}'`).join(", ")}${colours.reset}`);
+
+    let org = undefined;
     const organizationid = req.headers['shome-organizationid'] as string;
     const authtoken = req.headers['shome-authtoken'] as UUID;
-    console.log(`-----\n✅ [${req.method}:${req.originalUrl}] headers organizationid='${organizationid}'; authtoken='${authtoken}'`);
-    try {
-        org = await Organization.getByToken(organizationid, authtoken);
-        console.log(`✅ Login successed`);
-    } catch (e) {
-        console.log(`🚫 Login failed`);
-        //return res.status(401).json({err: "login failed"})
-        org = undefined;
+    let ret;
+    if (organizationid !== undefined) {
+        try {
+            org = await Organization.getByToken(organizationid, authtoken);
+            console.log(`✅ Login successed`);
+        } catch (e) {
+            console.log(`🚫 Login failed`);
+            //return res.status(401).json({err: "login failed"})
+            org = undefined;
+        }
     }
     try {
-        return await api.handleRequest({
+        ret =  await api.handleRequest({
             method: req.method,
             path: req.path,
             body: req.body,
@@ -86,13 +90,18 @@ app.use(async (req, res) => {
     catch (e) {
         if (e instanceof SHOMEError) {
             switch ((e as SHOMEError).json.code) {
-                case "forbidden:roleexpected": return res.status(403).json((e as SHOMEError).json);
-                default: return res.status(400).json((e as SHOMEError).json);
+                case "forbidden:roleexpected": ret = res.status(403).json((e as SHOMEError).json);
+                default: ret = res.status(400).json((e as SHOMEError).json);
             }
         } else {
-            return res.status(500).json({code: "Wrong parameters", description: `Request ${req.url} - ${(e as Error).message}`});
+            ret =  res.status(500).json({code: "Wrong parameters", description: `Request ${req.url} - ${(e as Error).message}`});
             console.log(`🚫 Request ${req.url} - ${(e as Error).message}`);
         }
     }
+    const requestEnd = new Date();
+    req.headers["perfomance-request-end"] = requestEnd.toISOString();
+    console.log(`${res.statusCode >= 200 && res.statusCode < 400 ? colours.fg.green : colours.fg.red}🏁 ${requestStart.toISOString()} - [${requestUUID}] - ${req.method} ${req.path} - ${res.statusCode} - ${requestEnd.getTime() - requestStart.getTime()} ms${colours.reset}`);
+    return ret;
 });
+
 app.listen(PORT, ()=>console.log(`✅ Now listening on port ${PORT}`));
