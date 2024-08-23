@@ -17,8 +17,3 @@ services:
     container_name: shome-cli
     environment:
       - PORT=3000
-  
-networks:
-  default:
-    name: base-network
-    external: true

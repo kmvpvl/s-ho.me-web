@@ -7,6 +7,9 @@ import { v4 } from "uuid";
 import { Device, IDevice, mongoDevices } from "./device";
 import { Telegraf } from "telegraf";
 
+/**
+ * List of available users' roles
+ */
 export type SHOMERoles = "admin" | "controller" | "user" | "viewer";
 
 export interface IOrganizationToken {
@@ -270,6 +273,13 @@ export default class Organization extends MongoProto<IOrganization> {
         return ret;
     }
 
+    /**
+     * Creates new token (user) with choosen roles
+     * 
+     * @param roles array of roles of new token (user)
+     * @param tguserid Telegram ID of new user
+     * @returns private key of token (user). The pair of organization id and the private key are login and password to access
+     */
     public async createToken(roles: Array<SHOMERoles>, tguserid?: string | number): Promise<UUID> {
         await this.checkData();
         const token = v4() as UUID;
@@ -279,12 +289,25 @@ export default class Organization extends MongoProto<IOrganization> {
         return token;
     }
 
+    /**
+     * Check do the some roles from list present in roles assigned. 
+     * 
+     * @param rolesToSearch array of strings (roles) or string (one role) which are searched in assigned roles
+     * @param rolesAssigned array of strings where roles are searched
+     * @returns true if roles found of "admin" roles assigned, false is otherwise
+     */
     public static hasRole(rolesToSearch: SHOMERoles | Array<SHOMERoles>, rolesAssigned: Array<SHOMERoles>): boolean {
         // implementing 'admin has any role'
         if (rolesAssigned.includes("admin")) return true;
         if (!(rolesToSearch instanceof Array)) rolesToSearch = [rolesToSearch];
         return  rolesToSearch.some(v=> rolesAssigned.includes(v));
     }
+
+    /**
+     * Reveals the list of devices of organizations
+     * 
+     * @returns array of devices
+     */
     public async devices(): Promise<IDevice[]> {
         const d = await mongoDevices.aggregate([{
             $match: {"organizationid": this.data?.id}

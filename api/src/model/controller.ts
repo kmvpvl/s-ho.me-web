@@ -1,6 +1,9 @@
 import { Schema, Types, model } from "mongoose";
 import MongoProto from "./mongoproto";
 
+/**
+ * IController settings
+ */
 export interface IController {
     _id?: Types.ObjectId;   //uniq id set by database
     organizationid: string; //facility's uniq text string id
