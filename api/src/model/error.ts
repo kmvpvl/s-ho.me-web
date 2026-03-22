@@ -1,7 +1,7 @@
 export type ErrorCode = 
 "client:unknown" 
 | "organization:notfound"
-| "settings:mongouriundefined"
+| "settings:mysqlundefined"
 | "device:notfound"
 | "forbidden:roleexpected"
 | "organozation:modenotfound";

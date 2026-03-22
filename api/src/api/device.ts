@@ -1,11 +1,8 @@
 import { Request, Response } from 'express';
 import {Context} from "openapi-backend";
-import { v4 } from 'uuid';
 import Organization, { SHOMERoles } from '../model/organization';
-import { Types } from 'mongoose';
 import SHOMEError from '../model/error';
 import { Device, DeviceReport, IDevice, IDeviceReport } from '../model/device';
-import { time } from 'console';
 import { Telegraf } from 'telegraf';
 
 export async function devicereport(context: Context, req:Request, res: Response, org: Organization, roles: SHOMERoles[], bot?: Telegraf) {
@@ -21,7 +18,7 @@ export async function devicereport(context: Context, req:Request, res: Response,
         idr.ip = ip instanceof Array?ip[0]:ip;
         if (idr.timestamp === undefined) idr.timestamp = timestamp;
         idr.created = new Date();
-        const dr = new DeviceReport(undefined, idr);
+        const dr = new DeviceReport(idr);
         await dr.save();
         const device = await Device.getById(idr.organizationid, idr.id);
         if ( device ) devices_ret.push(device.json as IDevice);

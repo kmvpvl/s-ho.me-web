@@ -1,9 +1,7 @@
-import { Schema, Types, model } from "mongoose";
-import MongoProto from "./mongoproto";
-import SHOMEError from "./error";
+import { DbRow, getPool, initSchema, toJsonOrNull, fromJsonOrNull } from "./db";
 
 export interface IDeviceReport {
-    _id?: Types.ObjectId;
+    _id?: string;
     created: Date;
     timestamp: Date;
     ip?: string;
@@ -14,55 +12,8 @@ export interface IDeviceReport {
     id: string;
 }
 
-export const DeviceReportSchema = new Schema({
-    created: {type: Date, required: true},
-    timestamp: {type: Date, required: true},
-    ip: {type: String, required: false},
-    value: {type: Number, required: true},
-    strvalue: {type: String, required: false},
-    extra: {type: Object, required: false},
-    organizationid: {type: String, required: true},
-    id: {type: String, required: true}
-});
-
-const DeviceLocationSchema = new Schema({
-    layer: {type: String, required: true},
-    x: {type: Number, required: false},
-    y: {type: Number, required: false}
-});
-const DeviceValueRangeSchema = new Schema({
-    name: {type: String, required: true},
-    color: {type: String, required: false},
-    min: {type: Number, required: false},
-    max: {type: Number, required: false}
-});
-
-export const DeviceSchema = new Schema({
-    organizationid: {type: String, required: true},
-    id: {type: String, required: true},
-    name: {type: String, required: true},
-    type: {type: String, required: true},
-    units: {type: String, required: false},
-    hardware: {type: String, required: true},
-    pin: {type: Number, required: true},
-    emulation: {type: Boolean, required: false},
-    freqRead: {type: Number, required: true},
-    freqReport: {type: Number, required: true},
-    threshold: {type: Number, required: false},
-    precision: {type: Number, required: false},
-    reportOnValueChanged: {type: Boolean, required: true},
-    reportOnInit: {type: Boolean, required: false},
-    location: {type: DeviceLocationSchema, required: true},
-    ranges: {type: [DeviceValueRangeSchema], required: false},
-    created: {type: Date, required: true},
-    changed: {type: Date, required: false}
-});
-
-const mongoDeviceReport = model<IDeviceReport>('devicereports', DeviceReportSchema);
-export const mongoDevices = model<IDevice>('devices', DeviceSchema);
-
 export interface IDevice {
-    _id?: Types.ObjectId;
+    _id?: string;
     organizationid: string;
     id: string;
     name: string;
@@ -92,31 +43,162 @@ export interface IDevice {
     changed?: Date;
 }
 
-export class DeviceReport extends MongoProto<IDeviceReport> {
-    constructor(id?: Types.ObjectId, data?: IDeviceReport) {
-        super(mongoDeviceReport, id, data);
+function mapDeviceRow(row: DbRow): IDevice {
+    return {
+        _id: String(row.id),
+        organizationid: row.organizationid,
+        id: row.device_id,
+        name: row.name,
+        type: row.type,
+        units: row.units ?? undefined,
+        hardware: row.hardware,
+        pin: Number(row.pin),
+        emulation: row.emulation ?? undefined,
+        freqRead: Number(row.freq_read),
+        freqReport: Number(row.freq_report),
+        threshold: row.threshold ?? undefined,
+        precision: row.precision_value ?? undefined,
+        reportOnValueChanged: Boolean(row.report_on_value_changed),
+        reportOnInit: row.report_on_init ?? undefined,
+        location: fromJsonOrNull<IDevice["location"]>(row.location_json) as IDevice["location"],
+        ranges: fromJsonOrNull<IDevice["ranges"]>(row.ranges_json),
+        created: new Date(row.created),
+        changed: row.changed ? new Date(row.changed) : undefined,
+    };
+}
+
+export class DeviceReport {
+    private data?: IDeviceReport;
+
+    constructor(data?: IDeviceReport) {
+        this.data = data;
+    }
+
+    get json(): IDeviceReport | undefined {
+        return this.data;
+    }
+
+    public async save() {
+        if (!this.data) {
+            throw new Error("device report data is not loaded");
+        }
+
+        await initSchema();
+        const pool = getPool();
+        const created = new Date(this.data.created) ?? new Date();
+        const timestamp = new Date(this.data.timestamp) ?? created;
+        const [result] = await pool.execute(
+            `INSERT INTO devicereports (
+                organizationid,
+                device_id,
+                value,
+                strvalue,
+                extra_json,
+                ip,
+                timestamp,
+                created
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                this.data.organizationid,
+                this.data.id,
+                this.data.value,
+                this.data.strvalue === undefined ? null : this.data.strvalue,
+                toJsonOrNull(this.data.extra),
+                this.data.ip ?? null,
+                timestamp,
+                created,
+            ],
+        );
+
+        this.data = {
+            ...this.data,
+            _id: String((result as any).insertId),
+            created,
+            timestamp,
+        };
     }
 }
 
-export class Device extends MongoProto<IDevice> {
-    constructor(id?: Types.ObjectId, data?: IDevice) {
-        super(mongoDevices, id, data);
+export class Device {
+    private data?: IDevice;
+
+    constructor(data?: IDevice) {
+        this.data = data;
     }
+
+    get json(): IDevice | undefined {
+        return this.data;
+    }
+
     public static async getById(orgid: string, name: string): Promise<Device | undefined> {
-        const d = await mongoDevices.aggregate([
-            {$match: {id: name, organizationid: orgid}}
-        ]);
-        if (d.length === 1) return new Device(undefined, d[0]);
+        await initSchema();
+        const pool = getPool();
+        const [rows] = await pool.query<DbRow[]>(
+            `SELECT * FROM devices WHERE organizationid = ? AND device_id = ? LIMIT 1`,
+            [orgid, name],
+        );
+        if (rows.length === 1) {
+            return new Device(mapDeviceRow(rows[0]));
+        }
     }
+
     public static async createDevice(device: IDevice): Promise<Device> {
         const d = await Device.getById(device.organizationid as string, device.id);
         if (d) return d;
-        const newD = new Device(undefined, device);
-        await newD.save();
+
+        await initSchema();
+        const pool = getPool();
+
+        const created = device.created ?? new Date();
+        const changed = device.changed ?? new Date();
+        const [result] = await pool.execute(
+            `INSERT INTO devices (
+                organizationid,
+                device_id,
+                name,
+                type,
+                units,
+                hardware,
+                pin,
+                emulation,
+                freq_read,
+                freq_report,
+                threshold,
+                precision_value,
+                report_on_value_changed,
+                report_on_init,
+                location_json,
+                ranges_json,
+                created,
+                changed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                device.organizationid,
+                device.id,
+                device.name,
+                device.type,
+                device.units ?? null,
+                device.hardware,
+                device.pin,
+                device.emulation ?? null,
+                device.freqRead,
+                device.freqReport,
+                device.threshold ?? null,
+                device.precision ?? null,
+                device.reportOnValueChanged,
+                device.reportOnInit ?? null,
+                JSON.stringify(device.location),
+                toJsonOrNull(device.ranges),
+                created,
+                changed,
+            ],
+        );
+
+        const newD = new Device({ ...device, _id: String((result as any).insertId), created, changed });
         return newD;
     }
+
     public getRange(value: number): string | undefined {
-        this.checkData();
         const r = this.data?.ranges?.find(v=>(v.min !== undefined && v.min <= value) && (v.max !== undefined && v.max >= value));
         if (r !== undefined) return r.name;
     }

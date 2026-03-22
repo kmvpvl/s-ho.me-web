@@ -11,8 +11,15 @@ import { Telegram, Telegraf, TelegramError, Context } from "telegraf";
 import checkSettings from "./model/settings"
 import colours from "./model/colours";
 import { tgConfig } from "./model/telegram";
+import { initSchema } from "./model/db";
 var npm_package_version = require('../package.json').version;
 checkSettings();
+initSchema().then(() => {
+    console.log("✅ MySQL schema is ready");
+}).catch((e) => {
+    console.error(`❌ MySQL initialization failed: ${(e as Error).message}`);
+    process.exit(1);
+});
 const api = new OpenAPIBackend({ 
     definition: 'shome.yml'
 });

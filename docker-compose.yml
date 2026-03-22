@@ -11,9 +11,9 @@ services:
         required: false
     environment:
       - PORT=8000
-  shome-cli:
-    image: shome-cli:1
-    build: ./cli/
-    container_name: shome-cli
-    environment:
-      - PORT=3000
+  # shome-cli:
+  #   image: shome-cli:1
+  #   build: ./cli/
+  #   container_name: shome-cli
+  #   environment:
+  #     - PORT=3000

@@ -1,11 +1,10 @@
-import { Schema, Types, model } from "mongoose";
-import MongoProto from "./mongoproto";
+import { DbRow, getPool, initSchema, toJsonOrNull, fromJsonOrNull } from "./db";
 
 /**
  * IController settings
  */
 export interface IController {
-    _id?: Types.ObjectId;   //uniq id set by database
+    _id?: string;   //uniq id set by database
     organizationid: string; //facility's uniq text string id
     name: string;           //name of controller
     description: string;    //description of controller 
@@ -28,50 +27,76 @@ export interface IController {
     }];
 }
 
-const ControllerAutoUpdateSchema = new Schema({
-    auto: {type: Boolean, required: true},
-    repo: {type: String, required: false},
-    branch: {type: String, required: false}
-});
+function mapControllerRow(row: DbRow): IController {
+    return {
+        _id: String(row.id),
+        organizationid: row.organizationid,
+        name: row.name,
+        description: row.description,
+        autoupdate: fromJsonOrNull<IController["autoupdate"]>(row.autoupdate_json) as IController["autoupdate"],
+        overwritesettingsfromcontroller: row.overwritesettingsfromcontroller ?? undefined,
+        location: fromJsonOrNull<object>(row.location_json),
+        buffer: fromJsonOrNull<object>(row.buffer_json),
+        logs: fromJsonOrNull<object>(row.logs_json),
+        layers: fromJsonOrNull<IController["layers"]>(row.layers_json),
+    };
+}
 
-const ControllerLayerSchema = new Schema({
-    sortNumber: {type: Number, required: true},
-    bgImage: {type: String, required: false},
-    id: {type: String, required: true},
-    name: {type: String, required: true}
-});
+export default class Controller {
+    private data?: IController;
 
-export const ControllerSchema = new Schema({
-    organizationid: {type: String, required: true},
-    name: {type: String, required: true},
-    description: {type: String, required: true},
-    autoupdate: {type: ControllerAutoUpdateSchema, required: true},
-    location: {type: Object, required: false},
-    buffer: {type: Object, required: false},
-    logs: {type: Object, required: false},
-    layers: {type: [ControllerLayerSchema], required: false},
-});
-
-const mongoControllers = model<IController>('controllers', ControllerSchema);
-
-export default class Controller extends MongoProto<IController> {
-    constructor (id?: Types.ObjectId, data?: IController) {
-        super(mongoControllers, id, data);
+    constructor(data?: IController) {
+        this.data = data;
     }
+
+    get json(): IController | undefined {
+        return this.data;
+    }
+
     public static async getByName(orgid: string, name: string): Promise<Controller | undefined> {
-        const c = await mongoControllers.aggregate([
-            {"$match": {
-                organizationid: orgid,
-                name: name
-            }}
-        ]);
-        if (c.length === 1) return new Controller(undefined, c[0]);
+        await initSchema();
+        const pool = getPool();
+        const [rows] = await pool.query<DbRow[]>(
+            `SELECT * FROM controllers WHERE organizationid = ? AND name = ? LIMIT 1`,
+            [orgid, name],
+        );
+        if (rows.length === 1) {
+            return new Controller(mapControllerRow(rows[0]));
+        }
     }
+
     public static async create(ctrl: IController): Promise<Controller> {
         const c = await Controller.getByName(ctrl.organizationid, ctrl.name);
         if (c) return c;
-        const newC = new Controller(undefined, ctrl);
-        await newC.save();
+
+        await initSchema();
+        const pool = getPool();
+        const [result] = await pool.execute(
+            `INSERT INTO controllers (
+                organizationid,
+                name,
+                description,
+                autoupdate_json,
+                overwritesettingsfromcontroller,
+                location_json,
+                buffer_json,
+                logs_json,
+                layers_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                ctrl.organizationid,
+                ctrl.name,
+                ctrl.description,
+                JSON.stringify(ctrl.autoupdate),
+                ctrl.overwritesettingsfromcontroller ?? null,
+                toJsonOrNull(ctrl.location),
+                toJsonOrNull(ctrl.buffer),
+                toJsonOrNull(ctrl.logs),
+                toJsonOrNull(ctrl.layers),
+            ],
+        );
+
+        const newC = new Controller({ ...ctrl, _id: String((result as any).insertId) });
         return newC;
     }
 }
