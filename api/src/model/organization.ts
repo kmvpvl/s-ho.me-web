@@ -220,7 +220,7 @@ export default class Organization extends MongoProto<IOrganization> {
         if (1 !== o.length) throw new SHOMEError("organization:notfound", `id='${id}'; token='${token}'`);
         const org = new Organization(undefined, o[0]);
         await org.load();
-        const roles = org.json?.tokens.filter(el=>el.authTokenHash==hash)[0].roles as SHOMERoles[];
+        const roles = org.json.tokens.filter(el=>el.authTokenHash==hash)[0].roles as SHOMERoles[];
         return {organization: org, roles: roles};
     }
     
@@ -238,7 +238,7 @@ export default class Organization extends MongoProto<IOrganization> {
         if (0 === o.length) throw new SHOMEError("organization:notfound", `tguserid='${tguserid}'`);
         const org = new Organization(undefined, o[0]);
         await org.load();
-        const roles = org.json?.tokens.filter(el=>el.tguserid===tguserid)[0].roles as SHOMERoles[];
+        const roles = org.json.tokens.filter(el=>el.tguserid===tguserid)[0].roles as SHOMERoles[];
         return {organization: org, roles: roles};
     }
 
@@ -283,7 +283,7 @@ export default class Organization extends MongoProto<IOrganization> {
     public async createToken(roles: Array<SHOMERoles>, tguserid?: string | number): Promise<UUID> {
         await this.checkData();
         const token = v4() as UUID;
-        const hash = Md5.hashStr(`${this.json?.id} ${token}`);
+        const hash = Md5.hashStr(`${this.json.id} ${token}`);
         this.data?.tokens.push({authTokenHash: hash, tguserid: tguserid, roles:roles});
         await this.save();
         return token;
@@ -382,8 +382,8 @@ export default class Organization extends MongoProto<IOrganization> {
                             for (const action of rule.actions) {
                                 if (action.notify?.tguser !== undefined) {
                                     //notify by TG
-                                    console.log(`Organization: '${this.data?.id}' need to inform: 🏠${this.data.id} ⚡${rule.description}\n📟${device.json?.name} 📐${range} ⚖️${(lv[0] as any).value}`);
-                                    bot?.telegram.sendMessage(action.notify?.tguser, `🏠${this.data.id} ⚡${rule.description}\n📟${device.json?.name} 📐${range} ⚖️${(lv[0] as any).value}`)
+                                    console.log(`Organization: '${this.name}' need to inform: 🏠${this.data.id} ⚡${rule.description}\n📟${device.json.name} 📐${range} ⚖️${(lv[0] as any).value}`);
+                                    bot?.telegram.sendMessage(action.notify?.tguser, `🏠${this.name} ⚡${rule.description}\n📟${device.json.name} 📐${range} ⚖️${(lv[0] as any).value}`)
                                 }
                             }
                         }
@@ -443,5 +443,9 @@ export default class Organization extends MongoProto<IOrganization> {
             }
           ]);
         return d;
+    }
+    get name(): string {
+        this.checkData();
+        return this.json.name === undefined?this.json.id:this.json.name;
     }
 }

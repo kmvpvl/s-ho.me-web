@@ -1,14 +1,11 @@
 import { Request, Response } from 'express';
 import {Context} from "openapi-backend";
-import { v4 } from 'uuid';
 import Organization, { SHOMERoles } from '../model/organization';
-import { Types } from 'mongoose';
 import SHOMEError from '../model/error';
 import { Device, DeviceReport, IDevice, IDeviceReport } from '../model/device';
-import { time } from 'console';
 import { Telegraf } from 'telegraf';
 
-export async function devicereport(context: Context, req:Request, res: Response, org: Organization, roles: SHOMERoles[], bot?: Telegraf) {
+export async function devicereport(context: Context, req:Request, res: Response, org: Organization, roles: SHOMERoles[], bot: Telegraf) {
     console.log(`Device report data = '${JSON.stringify(context.request.body)}'`);
     if (!Organization.hasRole('controller', roles)) throw new SHOMEError("forbidden:roleexpected", `Role 'controller' was expected`);
     const ddr = req.body;
@@ -16,7 +13,7 @@ export async function devicereport(context: Context, req:Request, res: Response,
     const devices_ret: Array<IDevice> = [];
     for (const i in ddr.devices) {
         const idr: IDeviceReport = ddr.devices[i];
-        idr.organizationid = org.json?.id as string;
+        idr.organizationid = org.json.id;
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
         idr.ip = ip instanceof Array?ip[0]:ip;
         if (idr.timestamp === undefined) idr.timestamp = timestamp;
@@ -24,7 +21,21 @@ export async function devicereport(context: Context, req:Request, res: Response,
         const dr = new DeviceReport(undefined, idr);
         await dr.save();
         const device = await Device.getById(idr.organizationid, idr.id);
-        if ( device ) devices_ret.push(device.json as IDevice);
+        if ( device ) {
+            devices_ret.push(device.json);
+            // here set timeout function. Waiting for next report
+            if (device.json.notifyOnDown) setTimeout(async (checkDate: Date, org: Organization, device: Device, bot: Telegraf)=>{
+                const values = await org.devicesWithLastValues([device.json.id]);
+                if (values.length === 1) {
+                    if (values[0].timestamp.getTime() <= checkDate.getTime()) {
+                        //there are no new DeviceReport since checkDate
+                        org.json.tokens.forEach(token=>{
+                            if (token.tguserid !== undefined) bot.telegram.sendMessage(token.tguserid, `🏠${org.name} ${device.json.name} out of order`);
+                        })
+                    }
+                }
+            }, device.json.freqReport * 2 * 1000, [dr.json.created, org, device, bot])
+        }
     }
     org.checkRules(bot);
     return res.status(200).json(devices_ret);
@@ -38,7 +49,7 @@ export async function initdevices(context: Context, req:Request, res: Response, 
     const idd_ret: Array<IDevice> = [];
     for (const i in idd) {
         const id = idd[i];
-        id.organizationid = org.json?.id as string;
+        id.organizationid = org.json.id;
         const d = await Device.createDevice(id);
         idd_ret.push(d.json as IDevice);
     }

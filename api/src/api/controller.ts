@@ -9,7 +9,7 @@ export default async function initcontroller(context: Context, req:Request, res:
     if (!Organization.hasRole('controller', roles)) throw new SHOMEError("forbidden:roleexpected", `Role 'controller' was expected`);
   
     const ic: IController = req.body;
-    ic.organizationid = org.json?.id as string;
+    ic.organizationid = org.json.id;
     const c = await Controller.create(ic);
     return res.status(200).json(c.json);
 } 

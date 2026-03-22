@@ -52,6 +52,7 @@ export const DeviceSchema = new Schema({
     precision: {type: Number, required: false},
     reportOnValueChanged: {type: Boolean, required: true},
     reportOnInit: {type: Boolean, required: false},
+    notifyOnDown: {type: Boolean, required: false},
     location: {type: DeviceLocationSchema, required: true},
     ranges: {type: [DeviceValueRangeSchema], required: false},
     created: {type: Date, required: true},
@@ -77,6 +78,7 @@ export interface IDevice {
     precision?: number;
     reportOnValueChanged: boolean;
     reportOnInit?: boolean;
+    notifyOnDown?: boolean;
     location: {
         layer: string;
         x?: number;
