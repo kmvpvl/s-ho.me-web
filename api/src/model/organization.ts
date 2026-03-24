@@ -189,9 +189,9 @@ export default class Organization {
         await initSchema();
         const pool = getPool();
         const [rows] = await pool.query<DbRow[]>(`SELECT * FROM organizations`);
-
         for (const row of rows) {
             const org = normalizeOrgRecord(row);
+            console.log(JSON.stringify(org));
             const tokenData = org.tokens.find((el) => Number(el.tguserid) === Number(tguserid));
             if (tokenData) {
                 return { organization: new Organization(org), roles: tokenData.roles };
