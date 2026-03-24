@@ -25,6 +25,7 @@ async function changemode_command(ctx: TGContext, bot: Telegraf, mode: string) {
 }
 
 async function values_command(ctx: TGContext, bot: Telegraf){
+    console.log(`values_command called with ctx: ${JSON.stringify(ctx)}`);
     const chat_id = ctx.message?.chat.id
     if (undefined !== chat_id) {
         try {
@@ -37,7 +38,8 @@ async function values_command(ctx: TGContext, bot: Telegraf){
                     const str = last_values.map(d=>`${d.name} - ${d.value}${d.units?d.units:""} - ${relativeDateString(new Date(d.timestamp))}`).join('\n');
                     bot.telegram.sendMessage(chat_id, `${cur_mode?`Current mode of ${orgMnemonicName}: ${cur_mode}`:`No mode of ${orgMnemonicName}`}\nLast values:\n${str}`)
                 } catch(e) {
-                    bot.telegram.sendMessage(chat_id, ``)
+                    console.log(`Error in values_command: ${e}`);
+                    bot.telegram.sendMessage(chat_id, `Error retrieving values`);
                 }
             } else {
                 bot.telegram.sendMessage(chat_id, "Access denied")
