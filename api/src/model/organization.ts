@@ -192,7 +192,7 @@ export default class Organization {
 
         for (const row of rows) {
             const org = normalizeOrgRecord(row);
-            const tokenData = org.tokens.find((el) => el.tguserid === tguserid);
+            const tokenData = org.tokens.find((el) => Number(el.tguserid) === Number(tguserid));
             if (tokenData) {
                 return { organization: new Organization(org), roles: tokenData.roles };
             }

@@ -25,8 +25,8 @@ async function changemode_command(ctx: TGContext, bot: Telegraf, mode: string) {
 }
 
 async function values_command(ctx: TGContext, bot: Telegraf){
-    console.log(`values_command called with ctx: ${JSON.stringify(ctx)}`);
     const chat_id = ctx.message?.chat.id
+    console.log(`values_command called by ${chat_id}`);
     if (undefined !== chat_id) {
         try {
             const org_roles = await Organization.getByTgUserId(chat_id);
